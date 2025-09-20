@@ -6,51 +6,44 @@ import io
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.table import Table
+
+# --- Agent and Database Imports ---
+# Make sure your file names match your project structure
 from agents import ScoutAgent
 from rohan import AnalystAgent
 from NetworkAnalystAgent import NetworkAnalystAgent
 from database import DatabaseManager
 
-
-# Fix Unicode output encoding for Windows terminal
+# Fix for potential Unicode output errors on Windows
 if sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-
 console = Console()
-
-# In main.py, replace the old function with this one.
-
-import re # Make sure 'import re' is at the top of your file
 
 def extract_json_from_text(text: str):
     """
     Finds and extracts the first valid JSON object from a string.
-    It looks for the text between the first '{' and the last '}'.
     """
     try:
-        # Find the starting position of the first open curly brace
         start_index = text.find('{')
-        # Find the starting position of the last closing curly brace
         end_index = text.rfind('}')
-        
         if start_index != -1 and end_index != -1 and end_index > start_index:
-            # Extract the substring that should be the JSON
             json_str = text[start_index:end_index+1]
-            # Try to parse it to confirm it's valid JSON
             json.loads(json_str)
             return json_str
     except (json.JSONDecodeError, IndexError):
-        # If parsing fails or indices are wrong, it's not valid
         return None
-    
-    return None # Return None if no valid JSON object is found
+    return None
 
 def print_analysis_tables(data):
+    """
+    The robust version of your display function.
+    """
     analysis = data.get("analysis", {})
-    key_figures = data.get("key_figures_mentioned", {})
+    key_figures = data.get("key_figures_mentioned") or {}
     market_impact_score = data.get("market_impact_score", "N/A")
 
+    # Summary Table
     console.print("[bold underline]Analysis Summary[/bold underline]")
     summary_table = Table(show_header=False, box=None)
     summary_table.add_row("Company:", analysis.get("company_name", "N/A"))
@@ -60,22 +53,25 @@ def print_analysis_tables(data):
     console.print(summary_table)
     console.print()
 
+    # News Sentiment Table
     console.print("[bold underline]News Sentiment[/bold underline]")
     sentiment = analysis.get("news_sentiment", {})
     sentiment_table = Table(show_header=True, header_style="bold magenta")
     sentiment_table.add_column("Aspect", style="dim")
     sentiment_table.add_column("Description")
-    sentiment_table.add_row("Direct Impact on JPM", sentiment.get("direct_impact_on_jpm", "N/A"))
-    sentiment_table.add_row("Indirect Impact on JPM", sentiment.get("indirect_impact_on_jpm", "N/A"))
+    sentiment_table.add_row("Direct Impact", sentiment.get("direct_impact_on_jpm", "N/A"))
+    sentiment_table.add_row("Indirect Impact", sentiment.get("indirect_impact_on_jpm", "N/A"))
     console.print(sentiment_table)
     console.print()
 
+    # Market data summary
     console.print("[bold underline]Market Data Summary[/bold underline]")
     console.print(analysis.get("market_data_summary", "N/A"))
     console.print()
 
-    console.print("[bold underline]JPM Market Data[/bold underline]")
-    jpm_data = key_figures.get("jpm_market_data", {})
+    # JPM Market Data Table
+    console.print("[bold underline]Market Data[/bold underline]")
+    jpm_data = key_figures.get("jpm_market_data") or {}
     jpm_table = Table(show_header=True, header_style="bold cyan")
     jpm_table.add_column("Metric")
     jpm_table.add_column("Value")
@@ -85,7 +81,8 @@ def print_analysis_tables(data):
     console.print(jpm_table)
     console.print()
 
-    console.print("[bold underline]Other Company Targets by JPMorgan Chase[/bold underline]")
+    # Other Company Targets Table
+    console.print("[bold underline]Other Company Targets Mentioned[/bold underline]")
     targets = key_figures.get("other_company_targets_by_jpm", [])
     if targets:
         targets_table = Table(show_header=True, header_style="bold green")
@@ -101,64 +98,66 @@ def print_analysis_tables(data):
             targets_table.add_row(company, rating, price_target, previous_price)
         console.print(targets_table)
     else:
-        console.print("No targets data available.")
+        console.print("No other targets data available in this analysis.")
 
-# In your main.py file
 
 def main():
-    # (Your agent initializations remain the same)
+    # --- Initialize all agents and the database manager ---
     scout_agent = ScoutAgent()
     analyst_agent = AnalystAgent()
     db_manager = DatabaseManager("bolt://localhost:7687", "neo4j", "password")
     network_agent = NetworkAnalystAgent(db_manager)
 
-    company_name = "JPMorgan Chase"
-    ticker = "JPM"
-    console.print("[bold underline]Starting Market Analysis Loop[/bold underline]")
+    # --- Ask the user for input at the start ---
+    company_name = input("Enter the full company name to monitor (e.g., Microsoft): ")
+    ticker = input(f"Enter the stock ticker for {company_name} (e.g., MSFT): ")
+    # -------------------------------------------
+
+    console.print(f"[bold underline]Starting Market Analysis Loop for {company_name}[/bold underline]")
 
     try:
         while True:
+            # Step 1: Scout fetches raw data
             data_contract = scout_agent.run(company_name=company_name, ticker=ticker)
 
             if not data_contract or not data_contract.get("news_articles"):
-                print("No articles found, waiting...")
+                print(f"No new articles found for {company_name}, waiting...")
                 time.sleep(60)
                 continue
             
             headline = data_contract["news_articles"][0].get("title", "No headline available")
             console.clear()
-            console.print(f"[bold blue]Latest News Headline:[/bold blue] {headline}")
+            console.print(f"[bold blue]Latest News Headline for {company_name}:[/bold blue] {headline}")
 
+            # Step 2: Analyst processes data with Gemini
             analysis_text = analyst_agent.analyze_data_contract(data_contract)
-            
+
+            # Step 3: Parse the AI's response and process it
             analysis_data = None
             try:
-                # First, try to parse the entire text as JSON
                 analysis_data = json.loads(analysis_text)
             except json.JSONDecodeError:
-                # If that fails, try to extract JSON from backticks
-                print("Initial parse failed, attempting to extract JSON block...")
                 json_str = extract_json_from_text(analysis_text)
                 if json_str:
                     try:
                         analysis_data = json.loads(json_str)
                     except json.JSONDecodeError:
-                        print("[bold red]Error: Failed to parse the extracted JSON block.[/bold red]")
+                        pass 
 
-            # If we successfully got data one way or another, process it
             if analysis_data:
                 print_analysis_tables(analysis_data)
                 network_agent.process_and_store(analysis_data, company_name)
             else:
-                # Fallback if no valid JSON could be found
                 console.print("[bold red]Error: Could not find valid JSON in AI response.[/bold red]")
                 console.print(Markdown(analysis_text))
 
-            time.sleep(15)
+            print("\n" + "="*80 + "\n")
+            time.sleep(61)
 
     except KeyboardInterrupt:
         console.print("\n[bold red]Exiting program...[/bold red]")
         db_manager.close()
-        
+
+
 if __name__ == "__main__":
     main()
