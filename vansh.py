@@ -1,52 +1,48 @@
 import time
 import json
 from rich.console import Console
-from rich.table import Table
-from rich.text import Text
+from rich.markdown import Markdown
 from agents import ScoutAgent
 from rohan import AnalystAgent
 
-
 console = Console()
 
-
-def print_analysis_report(analysis_json_str):
+def format_nested_output(data, indent=0):
     """
-    Parse the JSON analysis response string from AnalystAgent and print a rich table.
+    Recursively format any nested dict or list into indented paragraphs and bullet points.
     """
-    try:
-        analysis = json.loads(analysis_json_str)
-    except json.JSONDecodeError:
-        console.print("[bold red]Error parsing analysis JSON[/bold red]")
-        console.print(analysis_json_str)
-        return
-
-    table = Table(title="Analysis Report")
-    table.add_column("Metric", style="cyan", no_wrap=True)
-    table.add_column("Value", style="magenta")
-
-    for key, value in analysis.items():
-        if isinstance(value, dict):
-            value_str = ", ".join(f"{k}: {v}" for k, v in value.items())
-        else:
-            value_str = str(value)
-        table.add_row(key, value_str)
-
-    # Color code risk level if present
-    risk = analysis.get("risk_level", "").lower()
-    if risk == "high":
-        console.print(table, style="bold red")
-    elif risk == "medium":
-        console.print(table, style="yellow")
+    indent_str = "  " * indent
+    output_lines = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            heading = f"{indent_str}**{key.replace('_', ' ').title()}**"
+            if isinstance(value, (dict, list)):
+                output_lines.append(heading + ":")
+                output_lines.append(format_nested_output(value, indent + 1))
+            else:
+                output_lines.append(f"{heading}: {value}")
+    elif isinstance(data, list):
+        for i, item in enumerate(data, 1):
+            if isinstance(item, (dict, list)):
+                output_lines.append(f"{indent_str}- Item {i}:")
+                output_lines.append(format_nested_output(item, indent + 1))
+            else:
+                output_lines.append(f"{indent_str}- {item}")
     else:
-        console.print(table, style="green")
+        output_lines.append(f"{indent_str}{data}")
+    return "\n".join(output_lines)
 
+def print_any_output(data):
+    """
+    Print any JSON-like data with rich Markdown formatting and indentation.
+    """
+    formatted_text = format_nested_output(data)
+    console.print(Markdown(formatted_text))
 
 def main():
     scout_agent = ScoutAgent()
     analyst_agent = AnalystAgent()
 
-    # Company details for example
     company_name = "JPMorgan Chase"
     ticker = "JPM"
 
@@ -54,10 +50,8 @@ def main():
 
     try:
         while True:
-            # Fetch structured data from ScoutAgent according to data contract
             data_contract = scout_agent.run(company_name=company_name, ticker=ticker)
 
-            # Print latest news headline for quick context
             if data_contract["news_articles"]:
                 headline = data_contract["news_articles"][0].get("title", "No headline available")
             else:
@@ -65,18 +59,16 @@ def main():
             console.clear()
             console.print(f"[bold blue]Latest News Headline:[/bold blue] {headline}")
 
-            # Send structured data contract to AnalystAgent for JSON analysis
-            analysis_json_str = analyst_agent.analyze_data_contract(data_contract)
+            # Get textual Gemini response
+            analysis_text = analyst_agent.analyze_data_contract(data_contract)
 
-            # Print rich-formatted analysis report
-            print_analysis_report(analysis_json_str)
+            # Display as rich Markdown (no JSON parsing)
+            console.print(Markdown(analysis_text))
 
-            # Sleep to pace the demo (e.g., 15 sec)
             time.sleep(15)
 
     except KeyboardInterrupt:
         console.print("\n[bold red]Exiting program...[/bold red]")
-
 
 if __name__ == "__main__":
     main()
