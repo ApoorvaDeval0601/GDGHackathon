@@ -5,7 +5,9 @@ from rich.markdown import Markdown
 from agents import ScoutAgent
 from rohan import AnalystAgent
 
+
 console = Console()
+
 
 def format_nested_output(data, indent=0):
     """
@@ -32,12 +34,14 @@ def format_nested_output(data, indent=0):
         output_lines.append(f"{indent_str}{data}")
     return "\n".join(output_lines)
 
+
 def print_any_output(data):
     """
     Print any JSON-like data with rich Markdown formatting and indentation.
     """
     formatted_text = format_nested_output(data)
     console.print(Markdown(formatted_text))
+
 
 def main():
     scout_agent = ScoutAgent()
@@ -62,13 +66,14 @@ def main():
             # Get textual Gemini response
             analysis_text = analyst_agent.analyze_data_contract(data_contract)
 
-            # Display as rich Markdown (no JSON parsing)
+            # Display Gemini's textual Markdown response directly
             console.print(Markdown(analysis_text))
 
             time.sleep(15)
 
     except KeyboardInterrupt:
         console.print("\n[bold red]Exiting program...[/bold red]")
+
 
 if __name__ == "__main__":
     main()
