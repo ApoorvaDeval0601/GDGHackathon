@@ -9,6 +9,7 @@ from rich.table import Table
 from agents import ScoutAgent
 from rohan import AnalystAgent
 from NetworkAnalystAgent import NetworkAnalystAgent
+from database import DatabaseManager
 
 
 # Fix Unicode output encoding for Windows terminal
@@ -18,15 +19,32 @@ if sys.stdout.encoding.lower() != 'utf-8':
 
 console = Console()
 
-def extract_json_from_text(text):
+# In main.py, replace the old function with this one.
+
+import re # Make sure 'import re' is at the top of your file
+
+def extract_json_from_text(text: str):
     """
-    Extract JSON string wrapped in `````` from Gemini markdown output.
-    Returns JSON string or None if not found.
+    Finds and extracts the first valid JSON object from a string.
+    It looks for the text between the first '{' and the last '}'.
     """
-    match = re.search(r"``````", text, re.DOTALL | re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    return None
+    try:
+        # Find the starting position of the first open curly brace
+        start_index = text.find('{')
+        # Find the starting position of the last closing curly brace
+        end_index = text.rfind('}')
+        
+        if start_index != -1 and end_index != -1 and end_index > start_index:
+            # Extract the substring that should be the JSON
+            json_str = text[start_index:end_index+1]
+            # Try to parse it to confirm it's valid JSON
+            json.loads(json_str)
+            return json_str
+    except (json.JSONDecodeError, IndexError):
+        # If parsing fails or indices are wrong, it's not valid
+        return None
+    
+    return None # Return None if no valid JSON object is found
 
 def print_analysis_tables(data):
     analysis = data.get("analysis", {})
@@ -85,65 +103,62 @@ def print_analysis_tables(data):
     else:
         console.print("No targets data available.")
 
+# In your main.py file
+
 def main():
+    # (Your agent initializations remain the same)
     scout_agent = ScoutAgent()
     analyst_agent = AnalystAgent()
-
-    network_agent = NetworkAnalystAgent("bolt://localhost:7687", "neo4j", "password")
+    db_manager = DatabaseManager("bolt://localhost:7687", "neo4j", "password")
+    network_agent = NetworkAnalystAgent(db_manager)
 
     company_name = "JPMorgan Chase"
     ticker = "JPM"
-
     console.print("[bold underline]Starting Market Analysis Loop[/bold underline]")
 
     try:
         while True:
             data_contract = scout_agent.run(company_name=company_name, ticker=ticker)
 
-            if data_contract["news_articles"]:
-                headline = data_contract["news_articles"][0].get("title", "No headline available")
-            else:
-                headline = "No news articles found"
+            if not data_contract or not data_contract.get("news_articles"):
+                print("No articles found, waiting...")
+                time.sleep(60)
+                continue
+            
+            headline = data_contract["news_articles"][0].get("title", "No headline available")
             console.clear()
             console.print(f"[bold blue]Latest News Headline:[/bold blue] {headline}")
 
             analysis_text = analyst_agent.analyze_data_contract(data_contract)
+            
+            analysis_data = None
+            try:
+                # First, try to parse the entire text as JSON
+                analysis_data = json.loads(analysis_text)
+            except json.JSONDecodeError:
+                # If that fails, try to extract JSON from backticks
+                print("Initial parse failed, attempting to extract JSON block...")
+                json_str = extract_json_from_text(analysis_text)
+                if json_str:
+                    try:
+                        analysis_data = json.loads(json_str)
+                    except json.JSONDecodeError:
+                        print("[bold red]Error: Failed to parse the extracted JSON block.[/bold red]")
 
-            console.print("\n[bold yellow]Received AI analysis output:[/bold yellow]\n")
-            console.print(analysis_text)
-
-            raw_json_str = extract_json_from_text(analysis_text)
-            if raw_json_str:
-                try:
-                    analysis_data = json.loads(raw_json_str)
-
-                    if not analysis_data.get("institutions"):
-                        console.print("[bold red]Warning: No institutions found in AI output.[/bold red]")
-                    if not analysis_data.get("company_relationships"):
-                        console.print("[bold red]Warning: No company relationships found in AI output.[/bold red]")
-
-                    print_analysis_tables(analysis_data)
-
-                    console.print("\n[bold green]Neo4j Graph Update Details:[/bold green]")
-                    for inst in analysis_data.get("institutions", []):
-                        console.print(f" - Institution node will be created: {inst.get('name')}")
-                    for rel in analysis_data.get("company_relationships", []):
-                        console.print(f" - Relationship: {rel.get('source')} -[{rel.get('type')}]-> {rel.get('target')}")
-
-                    network_agent.process_analysis(raw_json_str)
-
-                except json.JSONDecodeError:
-                    console.print("[bold red]Failed to decode extracted JSON from AI output.[/bold red]")
-                    console.print(Markdown(analysis_text))
+            # If we successfully got data one way or another, process it
+            if analysis_data:
+                print_analysis_tables(analysis_data)
+                network_agent.process_and_store(analysis_data, company_name)
             else:
-                # If no embedded JSON block, just print raw Markdown analysis
+                # Fallback if no valid JSON could be found
+                console.print("[bold red]Error: Could not find valid JSON in AI response.[/bold red]")
                 console.print(Markdown(analysis_text))
 
             time.sleep(15)
 
     except KeyboardInterrupt:
         console.print("\n[bold red]Exiting program...[/bold red]")
-        network_agent.close()
-
+        db_manager.close()
+        
 if __name__ == "__main__":
     main()

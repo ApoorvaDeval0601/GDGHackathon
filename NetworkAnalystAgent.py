@@ -1,71 +1,38 @@
-import json
+# NetworkAnalystAgent.py (Corrected Version)
+
 from database import DatabaseManager
+import json
 
 class NetworkAnalystAgent:
     """
-    Takes the AI-enhanced analysis output, extracts institutions and relationships,
-    and writes them into the Neo4j graph database.
+    This agent takes the analysis from the AnalystAgent and uses the
+    DatabaseManager to store the findings in the Neo4j database.
     """
-    def __init__(self, db_uri, db_user, db_password):
-        self.db_manager = DatabaseManager(db_uri, db_user, db_password)
+    # This __init__ method now correctly accepts the db_manager object.
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
 
-    def process_analysis(self, analysis_json_str: str):
+    def process_and_store(self, analysis_data: dict, main_company_name: str):
         """
-        Parses JSON string output from AnalystAgent and updates the graph.
-        Expects keys 'institutions' and 'relationships' or similar in JSON.
+        Processes the analysis JSON dictionary and stores nodes and relationships.
         """
-        try:
-            data = json.loads(analysis_json_str)
-        except json.JSONDecodeError as e:
-            print(f"Error parsing JSON: {e}")
+        print(f"Network Analyst: Processing analysis for {main_company_name}")
+        
+        self.db.create_institution_node(main_company_name)
+
+        relationships = analysis_data.get("relationships", [])
+        if not relationships:
+            print("Network Analyst: No new relationships to process.")
             return
 
-        # Example structure ideas - adjust per your AnalystAgent output format
-        institutions = data.get("institutions", [])
-        relationships = data.get("company_relationships", [])
-
-        # Create nodes for institutions
-        for institution in institutions:
-            name = institution.get("name")
-            if name:
-                self.db_manager.create_institution_node(name)
-
-        # Create edges for relationships
         for rel in relationships:
-            source = rel.get("source")
-            target = rel.get("target")
-            rel_type = rel.get("type")  # e.g."invested_in", "acquired", "partnered_with"
-            if source and target and rel_type:
-                self.db_manager.create_relationship_edge(source, target, rel_type)
+            source = rel.get("source_entity")
+            target = rel.get("target_entity")
+            rel_type = rel.get("relationship_type")
 
-    def close(self):
-        self.db_manager.close()
+            if not all([source, target, rel_type]):
+                continue 
 
-
-# --- Example usage ---
-if __name__ == "__main__":
-    # Setup connection to Neo4j (update credentials accordingly)
-    db_uri = "bolt://localhost:7687"
-    db_user = "neo4j"
-    db_password = "password"
-
-    network_agent = NetworkAnalystAgent(db_uri, db_user, db_password)
-
-    # Example AI-generated JSON output, replace this with real output from AnalystAgent
-    example_json = '''
-    {
-        "institutions": [
-            {"name": "JPMorgan Chase"},
-            {"name": "Goldman Sachs"}
-        ],
-        "company_relationships": [
-            {"source": "JPMorgan Chase", "target": "Goldman Sachs", "type": "competitor"}
-        ]
-    }
-    '''
-
-    network_agent.process_analysis(example_json)
-
-    print("Nodes and relationships added to Neo4j.")
-
-    network_agent.close()
+            self.db.create_institution_node(source)
+            self.db.create_institution_node(target)
+            self.db.create_relationship_edge(source, target, rel_type)
