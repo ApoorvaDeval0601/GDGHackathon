@@ -7,7 +7,6 @@ from agents import ScoutAgent
 from rohan import AnalystAgent
 from NetworkAnalystAgent import NetworkAnalystAgent
 
-
 console = Console()
 
 def print_analysis_tables(data):
@@ -72,12 +71,10 @@ def print_analysis_tables(data):
     else:
         console.print("No targets data available.")
 
-
 def main():
     scout_agent = ScoutAgent()
     analyst_agent = AnalystAgent()
 
-    # Setup your Neo4j connection (update credentials)
     network_agent = NetworkAnalystAgent("bolt://localhost:7687", "neo4j", "password")
 
     company_name = "JPMorgan Chase"
@@ -87,7 +84,6 @@ def main():
 
     try:
         while True:
-            # Fetch raw data
             data_contract = scout_agent.run(company_name=company_name, ticker=ticker)
 
             if data_contract["news_articles"]:
@@ -97,14 +93,30 @@ def main():
             console.clear()
             console.print(f"[bold blue]Latest News Headline:[/bold blue] {headline}")
 
-            # Analyze with Gemini
             analysis_text = analyst_agent.analyze_data_contract(data_contract)
 
-            # Parse AI JSON and update Neo4j, else print raw markdown
+            console.print("\n[bold yellow]Received AI analysis JSON:[/bold yellow]\n")
+            console.print(analysis_text)
+
             try:
                 analysis_data = json.loads(analysis_text)
+
+                # Warn if important keys are missing or empty
+                if not analysis_data.get("institutions"):
+                    console.print("[bold red]Warning: No institutions found in AI output.[/bold red]")
+                if not analysis_data.get("company_relationships"):
+                    console.print("[bold red]Warning: No company relationships found in AI output.[/bold red]")
+
                 print_analysis_tables(analysis_data)
+
+                console.print("\n[bold green]Neo4j Graph Update Details:[/bold green]")
+                for inst in analysis_data.get("institutions", []):
+                    console.print(f" - Institution node will be created: {inst.get('name')}")
+                for rel in analysis_data.get("company_relationships", []):
+                    console.print(f" - Relationship: {rel.get('source')} -[{rel.get('type')}]-> {rel.get('target')}")
+
                 network_agent.process_analysis(analysis_text)
+
             except json.JSONDecodeError:
                 console.print(Markdown(analysis_text))
 
@@ -113,7 +125,6 @@ def main():
     except KeyboardInterrupt:
         console.print("\n[bold red]Exiting program...[/bold red]")
         network_agent.close()
-
 
 if __name__ == "__main__":
     main()
