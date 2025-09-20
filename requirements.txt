@@ -2,3 +2,4 @@ requests
 python-dotenv
 rich
 colorama
+google-generativeai
