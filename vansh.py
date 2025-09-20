@@ -1,5 +1,8 @@
 import time
 import json
+import re
+import sys
+import io
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.table import Table
@@ -7,14 +10,29 @@ from agents import ScoutAgent
 from rohan import AnalystAgent
 from NetworkAnalystAgent import NetworkAnalystAgent
 
+
+# Fix Unicode output encoding for Windows terminal
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
+
 console = Console()
+
+def extract_json_from_text(text):
+    """
+    Extract JSON string wrapped in `````` from Gemini markdown output.
+    Returns JSON string or None if not found.
+    """
+    match = re.search(r"``````", text, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return None
 
 def print_analysis_tables(data):
     analysis = data.get("analysis", {})
     key_figures = data.get("key_figures_mentioned", {})
     market_impact_score = data.get("market_impact_score", "N/A")
 
-    # Summary Table
     console.print("[bold underline]Analysis Summary[/bold underline]")
     summary_table = Table(show_header=False, box=None)
     summary_table.add_row("Company:", analysis.get("company_name", "N/A"))
@@ -24,7 +42,6 @@ def print_analysis_tables(data):
     console.print(summary_table)
     console.print()
 
-    # News Sentiment Table
     console.print("[bold underline]News Sentiment[/bold underline]")
     sentiment = analysis.get("news_sentiment", {})
     sentiment_table = Table(show_header=True, header_style="bold magenta")
@@ -35,12 +52,10 @@ def print_analysis_tables(data):
     console.print(sentiment_table)
     console.print()
 
-    # Market data summary
     console.print("[bold underline]Market Data Summary[/bold underline]")
     console.print(analysis.get("market_data_summary", "N/A"))
     console.print()
 
-    # JPM Market Data Table
     console.print("[bold underline]JPM Market Data[/bold underline]")
     jpm_data = key_figures.get("jpm_market_data", {})
     jpm_table = Table(show_header=True, header_style="bold cyan")
@@ -52,7 +67,6 @@ def print_analysis_tables(data):
     console.print(jpm_table)
     console.print()
 
-    # Other Company Targets Table
     console.print("[bold underline]Other Company Targets by JPMorgan Chase[/bold underline]")
     targets = key_figures.get("other_company_targets_by_jpm", [])
     if targets:
@@ -95,29 +109,34 @@ def main():
 
             analysis_text = analyst_agent.analyze_data_contract(data_contract)
 
-            console.print("\n[bold yellow]Received AI analysis JSON:[/bold yellow]\n")
+            console.print("\n[bold yellow]Received AI analysis output:[/bold yellow]\n")
             console.print(analysis_text)
 
-            try:
-                analysis_data = json.loads(analysis_text)
+            raw_json_str = extract_json_from_text(analysis_text)
+            if raw_json_str:
+                try:
+                    analysis_data = json.loads(raw_json_str)
 
-                # Warn if important keys are missing or empty
-                if not analysis_data.get("institutions"):
-                    console.print("[bold red]Warning: No institutions found in AI output.[/bold red]")
-                if not analysis_data.get("company_relationships"):
-                    console.print("[bold red]Warning: No company relationships found in AI output.[/bold red]")
+                    if not analysis_data.get("institutions"):
+                        console.print("[bold red]Warning: No institutions found in AI output.[/bold red]")
+                    if not analysis_data.get("company_relationships"):
+                        console.print("[bold red]Warning: No company relationships found in AI output.[/bold red]")
 
-                print_analysis_tables(analysis_data)
+                    print_analysis_tables(analysis_data)
 
-                console.print("\n[bold green]Neo4j Graph Update Details:[/bold green]")
-                for inst in analysis_data.get("institutions", []):
-                    console.print(f" - Institution node will be created: {inst.get('name')}")
-                for rel in analysis_data.get("company_relationships", []):
-                    console.print(f" - Relationship: {rel.get('source')} -[{rel.get('type')}]-> {rel.get('target')}")
+                    console.print("\n[bold green]Neo4j Graph Update Details:[/bold green]")
+                    for inst in analysis_data.get("institutions", []):
+                        console.print(f" - Institution node will be created: {inst.get('name')}")
+                    for rel in analysis_data.get("company_relationships", []):
+                        console.print(f" - Relationship: {rel.get('source')} -[{rel.get('type')}]-> {rel.get('target')}")
 
-                network_agent.process_analysis(analysis_text)
+                    network_agent.process_analysis(raw_json_str)
 
-            except json.JSONDecodeError:
+                except json.JSONDecodeError:
+                    console.print("[bold red]Failed to decode extracted JSON from AI output.[/bold red]")
+                    console.print(Markdown(analysis_text))
+            else:
+                # If no embedded JSON block, just print raw Markdown analysis
                 console.print(Markdown(analysis_text))
 
             time.sleep(15)
