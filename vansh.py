@@ -3,7 +3,7 @@ import json
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from agents import ScoutAgent 
+from agents import ScoutAgent
 from rohan import AnalystAgent
 
 
@@ -46,22 +46,37 @@ def main():
     scout_agent = ScoutAgent()
     analyst_agent = AnalystAgent()
 
+    # Company details for example
     company_name = "JPMorgan Chase"
     ticker = "JPM"
 
-    console.print("[bold underline]Single Market Analysis Run[/bold underline]")
+    console.print("[bold underline]Starting Market Analysis Loop[/bold underline]")
 
-    data_contract = scout_agent.run(company_name=company_name, ticker=ticker)
+    try:
+        while True:
+            # Fetch structured data from ScoutAgent according to data contract
+            data_contract = scout_agent.run(company_name=company_name, ticker=ticker)
 
-    if data_contract["news_articles"]:
-        headline = data_contract["news_articles"][0].get("title", "No headline available")
-    else:
-        headline = "No news articles found"
-    console.print(f"[bold blue]Latest News Headline:[/bold blue] {headline}")
+            # Print latest news headline for quick context
+            if data_contract["news_articles"]:
+                headline = data_contract["news_articles"][0].get("title", "No headline available")
+            else:
+                headline = "No news articles found"
+            console.clear()
+            console.print(f"[bold blue]Latest News Headline:[/bold blue] {headline}")
 
-    analysis_json_str = analyst_agent.analyze_data_contract(data_contract)
+            # Send structured data contract to AnalystAgent for JSON analysis
+            analysis_json_str = analyst_agent.analyze_data_contract(data_contract)
 
-    print_analysis_report(analysis_json_str)
+            # Print rich-formatted analysis report
+            print_analysis_report(analysis_json_str)
+
+            # Sleep to pace the demo (e.g., 15 sec)
+            time.sleep(15)
+
+    except KeyboardInterrupt:
+        console.print("\n[bold red]Exiting program...[/bold red]")
+
 
 if __name__ == "__main__":
     main()
