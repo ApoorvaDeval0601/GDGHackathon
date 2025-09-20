@@ -34,7 +34,7 @@ class NetworkAnalystAgent:
         for rel in relationships:
             source = rel.get("source")
             target = rel.get("target")
-            rel_type = rel.get("type")  # e.g. "invested_in", "acquired", "partnered_with"
+            rel_type = rel.get("type")  # e.g."invested_in", "acquired", "partnered_with"
             if source and target and rel_type:
                 self.db_manager.create_relationship_edge(source, target, rel_type)
 

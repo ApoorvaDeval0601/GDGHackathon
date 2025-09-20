@@ -56,6 +56,25 @@ class AnalystAgent:
         )
         return self.analyze(prompt)
  
+    def analyze_sentiment_and_relationships(self, article_text: str) -> str:
+        """
+        Analyze sentiment and extract company relationships from news article text.
+ 
+        Args:
+            article_text (str): The news article or text to analyze.
+ 
+        Returns:
+            str: JSON string with 'sentiment' and 'company_relationships' fields.
+        """
+        prompt = (
+            "Analyze the following news article. Provide the overall sentiment (positive, negative, neutral) "
+            "and extract any relationships between companies mentioned. Examples: "
+            "'Company X invested in Company Y', 'Company A acquired Company B', or 'Company C partnered with Company D'. "
+            "Return output in JSON format with keys 'sentiment' and 'company_relationships'.\n\n"
+            f"Article:\n{article_text}"
+        )
+        return self.analyze(prompt)
+ 
  
 if __name__ == "__main__":
     # Create an instance of AnalystAgent
