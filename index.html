@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Systemic Risk Sentinel</title>
-  
-  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-  
-  <style type="text/css">
+<title>Systemic Risk Sentinel</title>
+<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<style type="text/css">
     body {
       font-family: Arial, sans-serif;
       background-color: #1a1a1a;
@@ -54,33 +52,36 @@
       color: #fff;
       margin-top: 0.5em;
     }
-  </style>
+</style>
 </head>
 <body>
-
+ 
   <h1>Systemic Risk Sentinel</h1>
-
+ 
   <div id="mynetwork"></div>
-
+ 
   <div id="info-panels">
-    <div class="panel" id="risk-panel">
-      <h2>Risk Alerts</h2>
-      <textarea id="risk-alerts" readonly></textarea>
-    </div>
-
+<div class="panel" id="risk-panel">
+<h2>Risk Alerts</h2>
+<textarea id="risk-alerts" readonly></textarea>
+</div>
+ 
     <div class="panel" id="condition-panel">
-      <h2>Company Condition</h2>
-      <textarea id="company-condition" readonly></textarea>
-    </div>
-
+<h2>Company Condition</h2>
+<h4 id="company-name"></h4>
+<p><b>Latest News:</b> <span id="company-news"></span></p>
+<p><b>Market Data:</b> <span id="company-market"></span></p>
+<p id="company-report"></p>
+</div>
+ 
     <div class="panel" id="simulation-panel">
-      <h2>Scenario Simulation</h2>
-      <textarea id="simulation-result" readonly></textarea>
-      <input type="text" id="scenario-input" placeholder="Enter scenario description"/>
-      <button onclick="runSimulation()">Simulate</button>
-    </div>
-  </div>
-
+<h2>Scenario Simulation</h2>
+<p id="simulation-result"></p>
+<input type="text" id="scenario-input" placeholder="Enter scenario description"/>
+<button onclick="runSimulation()">Simulate</button>
+</div>
+</div>
+ 
   <script src="main.js"></script>
 </body>
 </html>
