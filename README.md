@@ -1,7 +1,3 @@
-Of course. Here is the text formatted as a professional, GitHub-compatible `README.md` file.
-
------
-
 # Systemic Risk Sentinel
 
 A comprehensive financial risk monitoring and analysis system that leverages AI agents to track company performance, assess systemic risks, and provide real-time insights through an interactive web interface.
