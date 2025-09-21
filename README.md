@@ -1,128 +1,146 @@
-Systemic Risk Sentinel
+Of course. Here is the text formatted as a professional, GitHub-compatible `README.md` file.
+
+-----
+
+# Systemic Risk Sentinel
+
 A comprehensive financial risk monitoring and analysis system that leverages AI agents to track company performance, assess systemic risks, and provide real-time insights through an interactive web interface.
 
-Overview
+## Overview
+
 Systemic Risk Sentinel is a sophisticated financial intelligence platform that combines multiple AI agents to monitor companies, analyze market data, assess risks, and visualize financial relationships. The system uses Neo4j for graph database storage, FastAPI for the backend, and a modern web interface for visualization.
 
-Architecture
+## Architecture
+
 The system consists of several specialized AI agents working together:
 
-Core Components
-ScoutAgent (agents.py) - Fetches real-time news and market data
+### Core Components
 
-CROAgent (croagent.py) - Chief Risk Officer agent for risk assessment and scenario simulation
+  - **ScoutAgent** (`agents.py`) - Fetches real-time news and market data
+  - **CROAgent** (`croagent.py`) - Chief Risk Officer agent for risk assessment and scenario simulation
+  - **AnalystAgent** (`rohan.py`) - Analyzes financial data and generates insights
+  - **NetworkAnalystAgent** (`NetworkAnalystAgent.py`) - Processes and stores relationship data in Neo4j
+  - **DatabaseManager** (`database.py`) - Handles Neo4j database operations
 
-AnalystAgent (rohan.py) - Analyzes financial data and generates insights
+### Backend & Frontend
 
-NetworkAnalystAgent (NetworkAnalystAgent.py) - Processes and stores relationship data in Neo4j
+  - **FastAPI Server** (`api.py`) - RESTful API providing endpoints for data access
+  - **Web Interface** (`index.html` + `main.js`) - Interactive visualization dashboard
+  - **Main Application** (`main.py`) - Entry point for the system
 
-DatabaseManager (database.py) - Handles Neo4j database operations
+-----
 
-Backend & Frontend
-FastAPI Server (api.py) - RESTful API providing endpoints for data access
+## Features
 
-Web Interface (index.html + main.js) - Interactive visualization dashboard
+### Real-time Monitoring
 
-Main Application (main.py) - Entry point for the system
+  - **News Aggregation**: Fetches latest news articles using NewsAPI
+  - **Market Data**: Retrieves real-time stock prices and market metrics via Yahoo Finance
+  - **Risk Assessment**: AI-powered analysis of news sentiment and market impact
 
-Features
-Real-time Monitoring
-News Aggregation: Fetches latest news articles using NewsAPI
+### Risk Analysis
 
-Market Data: Retrieves real-time stock prices and market metrics via Yahoo Finance
+  - **Automated Risk Scoring**: Calculates risk scores (1-10) based on news and market data
+  - **Company Condition Analysis**: Detailed AI-generated reports on company health
+  - **Scenario Simulation**: Hypothetical scenario modeling for risk assessment
 
-Risk Assessment: AI-powered analysis of news sentiment and market impact
+### Data Visualization
 
-Risk Analysis
-Automated Risk Scoring: Calculates risk scores (1-10) based on news and market data
+  - **Network Graph**: Interactive visualization of company relationships using Vis.js
+  - **Real-time Updates**: Live data refresh for continuous monitoring
+  - **Multi-panel Dashboard**: Comprehensive view of risk alerts, company conditions, and simulations
 
-Company Condition Analysis: Detailed AI-generated reports on company health
+### Database Integration
 
-Scenario Simulation: Hypothetical scenario modeling for risk assessment
+  - **Neo4j Graph Database**: Stores company relationships and institutional connections
+  - **Relationship Mapping**: Tracks competitor relationships, partnerships, and market connections
 
-Data Visualization
-Network Graph: Interactive visualization of company relationships using Vis.js
+-----
 
-Real-time Updates: Live data refresh for continuous monitoring
+## Installation
 
-Multi-panel Dashboard: Comprehensive view of risk alerts, company conditions, and simulations
+### Prerequisites
 
-Database Integration
-Neo4j Graph Database: Stores company relationships and institutional connections
+  - Python 3.8+
+  - Neo4j Database (running on localhost:7687)
+  - Required API keys (NewsAPI, Gemini AI)
 
-Relationship Mapping: Tracks competitor relationships, partnerships, and market connections
+### Setup
 
-Installation
-Prerequisites
-Python 3.8+
+1.  **Clone the repository**
 
-Neo4j Database (running on localhost:7687)
+    ```bash
+    git clone <repository-url>
+    cd GDGHackathon
+    ```
 
-Required API keys (NewsAPI, Gemini AI)
+2.  **Install dependencies**
 
-Setup
-Clone the repository
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-Bash
+3.  **Environment Configuration**
+    Create a `.env` file with your API keys:
 
-git clone <repository-url>
-cd GDGHackathon
-Install dependencies
+    ```
+    NEWS_API_KEY=your_newsapi_key
+    GEMINI_API_KEY=your_gemini_api_key
+    ```
 
-Bash
+4.  **Start Neo4j Database**
 
-pip install -r requirements.txt
-Environment Configuration
-Create a .env file with your API keys:
+    ```bash
+    # Using Docker
+    docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest
+    ```
 
-NEWS_API_KEY=your_newsapi_key
-GEMINI_API_KEY=your_gemini_api_key
-Start Neo4j Database
+5.  **Run the application**
 
-Bash
+    ```bash
+    # Start the FastAPI server
+    uvicorn api:app --reload --host 0.0.0.0 --port 8000
 
-# Using Docker
-docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest
-Run the application
+    # In another terminal, run the monitoring system
+    python vansh.py
+    ```
 
-Bash
+6.  **Access the web interface**
+    Open your browser and navigate to `http://localhost:8000` or open `index.html` directly.
 
-# Start the FastAPI server
-uvicorn api:app --reload --host 0.0.0.0 --port 8000
+-----
 
-# In another terminal, run the monitoring system
-python vansh.py
-Access the web interface
-Open your browser and navigate to http://localhost:8000 or open index.html directly.
+## Usage
 
-Usage
-Web Interface
-Graph Visualization: View company relationships and institutional connections
+### Web Interface
 
-Risk Alerts: Monitor real-time risk assessments for companies
+1.  **Graph Visualization**: View company relationships and institutional connections
+2.  **Risk Alerts**: Monitor real-time risk assessments for companies
+3.  **Company Analysis**: Get detailed condition reports with news and market data
+4.  **Scenario Simulation**: Test hypothetical scenarios and their potential impacts
 
-Company Analysis: Get detailed condition reports with news and market data
+### Command Line Interface
 
-Scenario Simulation: Test hypothetical scenarios and their potential impacts
-
-Command Line Interface
 Run the monitoring system:
 
-Bash
-
+```bash
 python vansh.py
+```
+
 Enter the company name and ticker when prompted to start monitoring.
 
-API Endpoints
-GET /api/graph_data - Retrieve network graph data
+### API Endpoints
 
-GET /api/risk_alerts/{company} - Get risk assessment for a company
+  - `GET /api/graph_data` - Retrieve network graph data
+  - `GET /api/risk_alerts/{company}` - Get risk assessment for a company
+  - `GET /api/company_condition/{company}` - Get detailed company analysis
+  - `POST /api/simulate/{company}` - Run scenario simulation
 
-GET /api/company_condition/{company} - Get detailed company analysis
+-----
 
-POST /api/simulate/{company} - Run scenario simulation
+## Project Structure
 
-Project Structure
+```
 GDGHackathon/
 ├── api.py                   # FastAPI server
 ├── agents.py                # ScoutAgent for data fetching
@@ -136,47 +154,46 @@ GDGHackathon/
 ├── rohan.py                 # AnalystAgent for data analysis
 ├── vansh.py                 # Main monitoring application
 └── README.md                # This file
-Key Technologies
-Backend: FastAPI, Python 3.8+
+```
 
-Database: Neo4j Graph Database
+## Key Technologies
 
-AI/ML: Google Gemini AI, Yahoo Finance API, NewsAPI
+  - **Backend**: FastAPI, Python 3.8+
+  - **Database**: Neo4j Graph Database
+  - **AI/ML**: Google Gemini AI, Yahoo Finance API, NewsAPI
+  - **Frontend**: HTML5, JavaScript, Vis.js
+  - **Data Processing**: Pandas, NumPy
+  - **Visualization**: Vis.js Network Graph
 
-Frontend: HTML5, JavaScript, Vis.js
+## Configuration
 
-Data Processing: Pandas, NumPy
+### API Keys Required
 
-Visualization: Vis.js Network Graph
+  - **NewsAPI**: For fetching news articles
+  - **Gemini AI**: For natural language processing and analysis
 
-Configuration
-API Keys Required
-NewsAPI: For fetching news articles
+### Database Configuration
 
-Gemini AI: For natural language processing and analysis
+  - **Neo4j URI**: `bolt://localhost:7687`
+  - **Username**: `neo4j`
+  - **Password**: `password`
 
-Database Configuration
-Neo4j URI: bolt://localhost:7687
+## Contributing
 
-Username: neo4j
+1.  Fork the repository
+2.  Create a feature branch
+3.  Make your changes
+4.  Add tests if applicable
+5.  Submit a pull request
 
-Password: password
+## License
 
-Contributing
-Fork the repository
-
-Create a feature branch
-
-Make your changes
-
-Add tests if applicable
-
-Submit a pull request
-
-License
 This project is part of a hackathon submission and is available under standard open-source terms.
 
-Support
+## Support
+
 For issues and questions, please refer to the individual agent files or create an issue in the repository.
 
-Note: This system is designed for financial analysis and risk assessment. Always verify results with professional financial advice before making investment decisions.
+-----
+
+**Note**: This system is designed for financial analysis and risk assessment. Always verify results with professional financial advice before making investment decisions.
